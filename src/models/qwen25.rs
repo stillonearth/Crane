@@ -214,12 +214,17 @@ struct Args {
 pub fn load_qwen25_model(model_path: &str) {
     let tokenizer = Tokenizer::from_file(tokenizer_filename).map_err(E::msg)?;
 
-    
+    let dtype = Dtype();
+    let device = Device::new("cuda");
+
     let vb = unsafe { VarBuilder::from_mmaped_safetensors(&filenames, dtype, &device)? };
     let config_file = format!("{}/config.json", model_path);
     // make sure config file exists
     let config: ConfigBase = serde_json::from_slice(&std::fs::read(config_file)?)?;
     let model = Model::Base(ModelBase::new(&config, vb)?);
+
+    // model for foward
+
 }
 
 fn main() -> Result<()> {
