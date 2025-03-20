@@ -20,7 +20,8 @@ fn main() {
     println!("Hello, world!");
     let args = Args::parse();
 
-    let dtype = DType::F32;
+    // let dtype = DType::F32;
+    let dtype = DType::F16;
     let device = Device::Cpu;
 
     let model = Model::new(&args.model_path, &device, &dtype).unwrap();
