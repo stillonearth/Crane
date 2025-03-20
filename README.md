@@ -1,4 +1,6 @@
-# Crane
+# Crane 𓅥
+
+> Crane focusing on accelerate LLM inference speed with the power of kernels in candle framework, while reducing development overhead, make it portable and fast run model on both CPU and GPU.
 
 **Crane** is  **C**andle-based **R**ust **A**ccelerate **N**eural **E**ngine. Inference popular models with Candle to get maximum speed on CPU and GPU.
 
