@@ -16,3 +16,7 @@ path = "apps/llmbench/main.rs"
 [[bin]]
 name = "sparktts"
 path = "apps/sparktts/main.rs"
+
+[[bin]]
+name = "example"
+path = "apps/example/main.rs"

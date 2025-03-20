@@ -1,13 +1,16 @@
 // implement Siglip2 model
 // to support Namo-500M-v2
+// Note that this Siglip2 doesn't contains original text part.
+// Just vision part.
 
-use candle_core::{Device, Module, Result, Tensor, D};
+use crate::utils::utils;
+use candle_core::{DType, Device, Module, Result, Tensor, D};
 use candle_nn::{
     conv2d_no_bias, embedding, func, layer_norm, linear, Activation, Conv2d, Conv2dConfig,
     Embedding, LayerNorm, LayerNormConfig, Linear, VarBuilder,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 pub struct Siglip2Config {
     pub hidden_size: usize,
     pub num_attention_heads: usize,
@@ -249,9 +252,9 @@ impl Siglip2VisionEmbeddings {
         let mut resized = Vec::with_capacity(b_size);
         for i in 0..b_size {
             // let (h, w) = spatial_shapes.i((i, 0..2))?.to_vec2::<usize>()?;
-            let row_tensor = spatial_shapes.narrow(0, i, 1)?;      // 提取第i行
-            let hw_tensor = row_tensor.narrow(1, 0, 2)?;           // 提取前两列
-            let hw_vec = hw_tensor.to_vec1::<i64>()?;              // 转换为i64类型
+            let row_tensor = spatial_shapes.narrow(0, i, 1)?; // 提取第i行
+            let hw_tensor = row_tensor.narrow(1, 0, 2)?; // 提取前两列
+            let hw_vec = hw_tensor.to_vec1::<i64>()?; // 转换为i64类型
             let (h, w) = (hw_vec[0] as usize, hw_vec[1] as usize);
 
             // 双线性插值
@@ -395,7 +398,6 @@ impl Siglip2MultiheadAttentionPoolingHead {
     }
 }
 
-// 顶层视觉模型
 #[derive(Debug)]
 pub struct Siglip2VisionModel {
     vision_model: Siglip2VisionTransformer,
@@ -407,7 +409,7 @@ impl Siglip2VisionModel {
         Ok(Self { vision_model })
     }
 
-    fn forward(
+    pub fn forward(
         &self,
         pixel_values: &Tensor,
         pixel_attention_mask: &Tensor,
@@ -415,6 +417,20 @@ impl Siglip2VisionModel {
     ) -> Result<Tensor> {
         self.vision_model
             .forward(pixel_values, Some(pixel_attention_mask), spatial_shapes)
+    }
+
+    pub fn from_pretrained(model_path: &str, device: &Device, dtype: &DType) -> Result<Self> {
+        let config_file = std::path::Path::new(model_path).join("config.json");
+        let config_data = std::fs::read(config_file)?;
+        let config: Siglip2Config =
+            serde_json::from_slice(&config_data).expect("siglip2 config parse error.");
+
+        let filenames = utils::get_safetensors_files(model_path).unwrap();
+
+        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&filenames, *dtype, device) }?;
+        let vision_model = Siglip2VisionTransformer::new(&config, vb.pp("vision_model"))?;
+
+        Ok(Self { vision_model })
     }
 }
 
