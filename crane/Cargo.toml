@@ -7,3 +7,12 @@ edition = "2024"
 clap = {version = "4.5.32", features = ["derive"]}
 
 crane_core = { path = "../crane_core" }
+
+
+[[bin]]
+name = "llmbench"
+path = "apps/llmbench/main.rs"
+
+[[bin]]
+name = "sparktts"
+path = "apps/sparktts/main.rs"
