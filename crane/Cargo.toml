@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 clap = {version = "4.5.32", features = ["derive"]}
 
-crane_core = { path = "../crane_core" }
+crane-core = { path = "../crane-core" }
 
 
 [[bin]]

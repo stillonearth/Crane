@@ -434,6 +434,9 @@ impl Siglip2VisionModel {
     }
 }
 
+// Siglip2 Processor?
+
+
 pub fn test_main() {
     // let device = Device::Cpu;
     // let vb = VarBuilder::from_pretrained("model.safetensors", DType::F32, &device)?;
