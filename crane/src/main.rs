@@ -4,13 +4,26 @@ use crane_core::models::qwen25::TextGeneration;
 use crane_core::models::DType;
 use crane_core::models::Device;
 
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[clap(about, version, author)]
+struct Args {
+    #[clap(short('m'), long, default_value = "checkpoints/Qwen2.5-0.5B-Instruct")]
+    model_path: String,
+
+    #[clap(short('p'), long)]
+    prompt: Option<String>,
+}
+
 fn main() {
     println!("Hello, world!");
+    let args = Args::parse();
 
     let dtype = DType::F32;
     let device = Device::Cpu;
 
-    let model = Model::new("checkpoints/Qwen2.5-0.5B-Instruct", &device, &dtype).unwrap();
+    let model = Model::new(&args.model_path, &device, &dtype).unwrap();
     let tokenizer = model.tokenizer().clone();
 
     let mut pipe = TextGeneration::new(

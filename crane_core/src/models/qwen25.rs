@@ -143,6 +143,9 @@ impl Model {
 
     fn from_pretrained(model_path: &str, device: &Device, dtype: &DType) -> Result<Model> {
         let tokenizer_path = std::path::Path::new(model_path).join("tokenizer.json");
+        if !tokenizer_path.exists() {
+            anyhow::bail!("Tokenizer not found at {}", tokenizer_path.display());
+        }
         let tokenizer = Tokenizer::from_file(&tokenizer_path).map_err(E::msg)?;
 
         let filenames = utils::get_safetensors_files(model_path)?;
