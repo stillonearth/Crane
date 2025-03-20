@@ -19,3 +19,16 @@ However, candle framework brings the gap between efficiency and simplicity. With
 ## Updates
 
 - **`2025.03.19`**: 🔥project initialized;
+
+
+## Speed Compare
+
+
+Here are some speedup compare between **Crane** can other framework.
+
+float32:
+
+| Model/Platform | mac M1 metal | mac M1 cpu | mac M4 metal | v100 GPU | pytorch |
+| -------------- | ------------- | ---------- | ------------ | -------- | ------- |
+| Qwen2.5-500M   | 17.5 t/s      | 14 t/s     | /            |          |         |
+| Qwen2.5-VL-3B  | /             | /          | /            |          |         |

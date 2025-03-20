@@ -26,6 +26,8 @@ fn main() {
     let model = Model::new(&args.model_path, &device, &dtype).unwrap();
     let tokenizer = model.tokenizer().clone();
 
+    crane_core::utils::utils::print_candle_build_info();
+
     let mut pipe = TextGeneration::new(
         model,
         tokenizer,
