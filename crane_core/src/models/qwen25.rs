@@ -5,7 +5,6 @@ extern crate intel_mkl_src;
 extern crate accelerate_src;
 
 use anyhow::{Error as E, Result};
-use clap::Parser;
 
 use candle_transformers::models::qwen2::{Config as ConfigBase, ModelForCausalLM as ModelBase};
 use candle_transformers::models::qwen2_moe::{Config as ConfigMoe, Model as ModelMoe};
@@ -19,32 +18,18 @@ use tokenizers::Tokenizer;
 use crate::utils::token_output_stream::TokenOutputStream;
 use crate::utils::utils;
 
-pub enum Model {
-    Base(ModelBase),
-    Moe(ModelMoe),
-}
-
-impl Model {
-    fn forward(&mut self, xs: &Tensor, s: usize) -> candle_core::Result<Tensor> {
-        match self {
-            Self::Moe(ref mut m) => m.forward(xs, s),
-            Self::Base(ref mut m) => m.forward(xs, s),
-        }
-    }
-}
-
 pub struct TextGeneration {
-    model: Model,
-    device: Device,
-    tokenizer: TokenOutputStream,
-    logits_processor: LogitsProcessor,
-    repeat_penalty: f32,
-    repeat_last_n: usize,
+    pub model: Model,
+    pub device: Device,
+    pub tokenizer: TokenOutputStream,
+    pub logits_processor: LogitsProcessor,
+    pub repeat_penalty: f32,
+    pub repeat_last_n: usize,
 }
 
 impl TextGeneration {
     #[allow(clippy::too_many_arguments)]
-    fn new(
+    pub fn new(
         model: Model,
         tokenizer: Tokenizer,
         seed: u64,
@@ -65,7 +50,7 @@ impl TextGeneration {
         }
     }
 
-    fn run(&mut self, prompt: &str, sample_len: usize) -> Result<()> {
+    pub fn run(&mut self, prompt: &str, sample_len: usize) -> Result<()> {
         use std::io::Write;
         self.tokenizer.clear();
         let mut tokens = self
@@ -130,132 +115,49 @@ impl TextGeneration {
     }
 }
 
-pub fn load_qwen25_model(model_path: &str) -> Model {
-    let tokenizer_filename = std::path::PathBuf::from(model_path);
-
-    let tokenizer = Tokenizer::from_file(tokenizer_filename).map_err(E::msg);
-
-    let dtype = DType::F32;
-    let device = Device::Cpu;
-
-    let filenames = utils::get_safetensors_files(model_path).unwrap();
-
-    let vb = unsafe { VarBuilder::from_mmaped_safetensors(&filenames, dtype, &device) };
-    let config_file = format!("{}/config.json", model_path);
-    // make sure config file exists
-    let config: ConfigBase = serde_json::from_slice(&std::fs::read(config_file).unwrap()).unwrap();
-    let model = Model::Base(ModelBase::new(&config, vb.unwrap()).expect(""));
-
-    // model for foward
-    model
+pub struct Model {
+    pub tokenizer: Tokenizer,
+    model_typed: ModelTyped,
 }
 
-fn test_main() -> Result<()> {
-    // use tracing_chrome::ChromeLayerBuilder;
-    // use tracing_subscriber::prelude::*;
+pub enum ModelTyped {
+    Base(ModelBase),
+    Moe(ModelMoe),
+}
 
-    // let args = Args::parse();
-    // let _guard = if args.tracing {
-    //     let (chrome_layer, guard) = ChromeLayerBuilder::new().build();
-    //     tracing_subscriber::registry().with(chrome_layer).init();
-    //     Some(guard)
-    // } else {
-    //     None
-    // };
+impl Model {
+    pub fn new(model_path: &str, device: &Device, dtype: &DType) -> Result<Self> {
+        Self::from_pretrained(model_path, device, dtype)
+    }
 
-    // println!(
-    //     "temp: {:.2} repeat-penalty: {:.2} repeat-last-n: {}",
-    //     args.temperature.unwrap_or(0.),
-    //     args.repeat_penalty,
-    //     args.repeat_last_n
-    // );
+    pub fn tokenizer(&self) -> Tokenizer {
+        self.tokenizer.clone()
+    }
 
-    // let start = std::time::Instant::now();
-    // let api = Api::new()?;
-    // let model_id = match args.model_id {
-    //     Some(model_id) => model_id,
-    //     None => {
-    //         let (version, size) = match args.model {
-    //             WhichModel::W2_0_5b => ("2", "0.5B"),
-    //             WhichModel::W2_1_5b => ("2", "1.5B"),
-    //             WhichModel::W2_7b => ("2", "7B"),
-    //             WhichModel::W2_72b => ("2", "72B"),
-    //             WhichModel::W0_5b => ("1.5", "0.5B"),
-    //             WhichModel::W1_8b => ("1.5", "1.8B"),
-    //             WhichModel::W4b => ("1.5", "4B"),
-    //             WhichModel::W7b => ("1.5", "7B"),
-    //             WhichModel::W14b => ("1.5", "14B"),
-    //             WhichModel::W72b => ("1.5", "72B"),
-    //             WhichModel::MoeA27b => ("1.5", "MoE-A2.7B"),
-    //         };
-    //         format!("Qwen/Qwen{version}-{size}")
-    //     }
-    // };
-    // let repo = api.repo(Repo::with_revision(
-    //     model_id,
-    //     RepoType::Model,
-    //     args.revision,
-    // ));
-    // let tokenizer_filename = match args.tokenizer_file {
-    //     Some(file) => std::path::PathBuf::from(file),
-    //     None => repo.get("tokenizer.json")?,
-    // };
-    // let filenames = match args.weight_files {
-    //     Some(files) => files
-    //         .split(',')
-    //         .map(std::path::PathBuf::from)
-    //         .collect::<Vec<_>>(),
-    //     None => match args.model {
-    //         WhichModel::W0_5b | WhichModel::W2_0_5b | WhichModel::W2_1_5b | WhichModel::W1_8b => {
-    //             vec![repo.get("model.safetensors")?]
-    //         }
-    //         WhichModel::W4b
-    //         | WhichModel::W7b
-    //         | WhichModel::W2_7b
-    //         | WhichModel::W14b
-    //         | WhichModel::W72b
-    //         | WhichModel::W2_72b
-    //         | WhichModel::MoeA27b => {
-    //             candle_examples::hub_load_safetensors(&repo, "model.safetensors.index.json")?
-    //         }
-    //     },
-    // };
-    // println!("retrieved the files in {:?}", start.elapsed());
-    // let tokenizer = Tokenizer::from_file(tokenizer_filename).map_err(E::msg)?;
+    fn forward(&mut self, xs: &Tensor, s: usize) -> candle_core::Result<Tensor> {
+        match self.model_typed {
+            ModelTyped::Moe(ref mut m) => m.forward(xs, s),
+            ModelTyped::Base(ref mut m) => m.forward(xs, s),
+        }
+    }
 
-    // let start = std::time::Instant::now();
-    // let config_file = repo.get("config.json")?;
-    // let device = candle_examples::device(args.cpu)?;
-    // let dtype = if device.is_cuda() {
-    //     DType::BF16
-    // } else {
-    //     DType::F32
-    // };
-    // let vb = unsafe { VarBuilder::from_mmaped_safetensors(&filenames, dtype, &device)? };
-    // let model = match args.model {
-    //     WhichModel::MoeA27b => {
-    //         let config: ConfigMoe = serde_json::from_slice(&std::fs::read(config_file)?)?;
-    //         Model::Moe(ModelMoe::new(&config, vb)?)
-    //     }
-    //     _ => {
-    //         let config: ConfigBase = serde_json::from_slice(&std::fs::read(config_file)?)?;
-    //         Model::Base(ModelBase::new(&config, vb)?)
-    //     }
-    // };
+    fn from_pretrained(model_path: &str, device: &Device, dtype: &DType) -> Result<Model> {
+        let tokenizer_path = std::path::Path::new(model_path).join("tokenizer.json");
+        let tokenizer = Tokenizer::from_file(&tokenizer_path).map_err(E::msg)?;
 
-    // println!("loaded the model in {:?}", start.elapsed());
+        let filenames = utils::get_safetensors_files(model_path)?;
 
-    // let mut pipeline = TextGeneration::new(
-    //     model,
-    //     tokenizer,
-    //     args.seed,
-    //     args.temperature,
-    //     args.top_p,
-    //     args.repeat_penalty,
-    //     args.repeat_last_n,
-    //     &device,
-    // );
-    // pipeline.run(&args.prompt, args.sample_len)?;
+        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&filenames, *dtype, device) }?;
 
-    Ok(())
+        let config_file = std::path::Path::new(model_path).join("config.json");
+        let config_data = std::fs::read(config_file)?;
+        let config: ConfigBase = serde_json::from_slice(&config_data)?;
+
+        let model_typed = ModelTyped::Base(ModelBase::new(&config, vb)?);
+
+        Ok(Self {
+            tokenizer,
+            model_typed,
+        })
+    }
 }
