@@ -9,16 +9,17 @@ A high-performance inference framework leveraging Rust's Candle for maximum spee
 
 **Supported Models**:
 
-- 🎙️ TTS Systems:[Spark-TTS](https://github.com/SparkAudio/Spark-TTS) | [Orpheus-TTS](https://github.com/canopyai/Orpheus-TTS)
+- 🎙️ TTS Systems:[Spark-TTS](https://github.com/SparkAudio/Spark-TTS) | [Orpheus-TTS](https://github.com/canopyai/Orpheus-TTS) (WIP)
 - 🧠 Foundation Models:Qwen2.5 series (Base/VL), Basic LLMs
 - 🌌 Multimodal Models:
   Namo-R1, Qwen2.5-VL
 
 **Key Advantages**:
-🚀 **Blazing-Fast Inference**: Outperforms native PyTorch with Candle's optimized kernels
-🦀 **Rust-Powered**: Eliminate C++ complexity while maintaining native performance
-🍎 **Apple Silicon Optimized**: Achieve GPU acceleration via Metal on macOS devices
-🤖 **Hardware Agnostic**: Unified codebase for CPU/CUDA/Metal execution
+
+- 🚀 **Blazing-Fast Inference**: Outperforms native PyTorch with Candle's optimized kernels;
+- 🦀 **Rust-Powered**: Eliminate C++ complexity while maintaining native performance;
+- 🍎 **Apple Silicon Optimized**: Achieve GPU acceleration via Metal on macOS devices;
+- 🤖 **Hardware Agnostic**: Unified codebase for CPU/CUDA/Metal execution;
 
 ## 🧐 Why Choose Crane?
 
