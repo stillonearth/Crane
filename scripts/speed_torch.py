@@ -13,6 +13,8 @@ def benchmark_speed(model_path):
     )
     tokenizer = AutoTokenizer.from_pretrained(model_path, padding_side="left")
 
+    tokenizer.apply_chat_template()
+
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 

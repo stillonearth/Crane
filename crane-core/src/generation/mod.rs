@@ -11,6 +11,7 @@ pub struct GenerationConfig {
     pub do_sample: bool,
     pub pad_token_id: Option<u32>,
     pub eos_token_id: Option<u32>,
+    pub report_speed: bool,
 }
 
 impl Default for GenerationConfig {
@@ -24,6 +25,7 @@ impl Default for GenerationConfig {
             do_sample: false,
             pad_token_id: None,
             eos_token_id: None,
+            report_speed: false,
         }
     }
 }

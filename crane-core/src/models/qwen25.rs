@@ -14,10 +14,10 @@ use candle_transformers::models::qwen2_moe::{Config as ConfigMoe, Model as Model
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::generation::LogitsProcessor;
-use hf_hub::{api::sync::Api, Repo, RepoType};
 use tokenizers::Tokenizer;
 
 use crate::generation::based::ModelForCausalLM;
+use crate::generation::GenerationConfig;
 use crate::utils::token_output_stream::TokenOutputStream;
 use crate::utils::utils;
 
@@ -177,14 +177,14 @@ impl Model {
         Ok(input_ids)
     }
 
-    pub fn decode(&self, input: &[u32], skip_special_tokens: bool) -> Result<String> {
-        let tokens = self
-            .tokenizer
-            .tokenizer
-            .decode(input, skip_special_tokens)
-            .map_err(E::msg)
+    pub fn warnmup(&mut self) {
+        let _ = self
+            .generate(
+                &[45, 546, 456],
+                &GenerationConfig::with_max_tokens(20),
+                None,
+            )
             .unwrap();
-        Ok(tokens)
     }
 }
 
@@ -204,6 +204,12 @@ impl ModelForCausalLM for Model {
         let mut logits_processor = LogitsProcessor::new(1024, config.temperature, config.top_p);
 
         let mut tokens = input_ids.to_vec();
+        for &t in tokens.iter() {
+            if let Some(t) = self.tokenizer.next_token(t)? {
+                // print!("{t}")
+            }
+        }
+        std::io::stdout().flush()?;
 
         let mut generated_tokens = 0usize;
         let eos_token = match self.tokenizer.get_token("<|endoftext|>") {
@@ -216,6 +222,8 @@ impl ModelForCausalLM for Model {
             let start_pos = tokens.len().saturating_sub(context_size);
             let ctxt = &tokens[start_pos..];
             let input = Tensor::new(ctxt, &self.device)?.unsqueeze(0)?;
+            println!("input: {:?}", input.shape());
+            println!("start_pos: {:?}", start_pos);
             let logits = self.forward(&input, start_pos)?;
             let logits = logits.squeeze(0)?.squeeze(0)?.to_dtype(DType::F32)?;
             let logits = if config.repetition_penalty == 1. {
@@ -235,20 +243,24 @@ impl ModelForCausalLM for Model {
             if next_token == eos_token {
                 break;
             }
-            // if let Some(t) = self.tokenizer.next_token(next_token)? {
-            //     print!("{t}");
-            //     // std::io::stdout().flush()?;
-            // }
+            if let Some(t) = self.tokenizer.next_token(next_token)? {
+                print!("{t}");
+                std::io::stdout().flush()?;
+            }
         }
         let dt = start_gen.elapsed();
-        // if let Some(rest) = self.tokenizer.decode_rest().map_err(E::msg)? {
-        //     print!("{rest}");
-        // }
+        if let Some(rest) = self.tokenizer.decode_rest().map_err(E::msg)? {
+            print!("{rest}");
+        }
         std::io::stdout().flush()?;
-        println!(
-            "\n{generated_tokens} tokens generated ({:.2} token/s)",
-            generated_tokens as f64 / dt.as_secs_f64(),
-        );
+
+        if config.report_speed {
+            println!(
+                "\n{generated_tokens} tokens generated ({:.2} token/s)",
+                generated_tokens as f64 / dt.as_secs_f64(),
+            );
+        }
+
         Ok(tokens)
     }
 }

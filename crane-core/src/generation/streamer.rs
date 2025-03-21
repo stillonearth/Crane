@@ -1,5 +1,6 @@
 use anyhow::Result;
-use tokenizers::Tokenizer;
+
+use crate::autotokenizer::AutoTokenizer;
 
 pub trait TokenStreamer {
     fn append(&mut self, token_id: u32) -> Result<()>;
@@ -7,7 +8,7 @@ pub trait TokenStreamer {
 }
 
 pub struct TextStreamer {
-    pub tokenizer: Tokenizer,
+    pub tokenizer: AutoTokenizer,
     pub buffer: String,
 }
 
