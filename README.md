@@ -21,6 +21,14 @@ A high-performance inference framework leveraging Rust's Candle for maximum spee
 - 🍎 **Apple Silicon Optimized**: Achieve GPU acceleration via Metal on macOS devices;
 - 🤖 **Hardware Agnostic**: Unified codebase for CPU/CUDA/Metal execution;
 
+
+## 🔥 Updates
+
+- **`2025.03.21`**: 🔥 Qwen2.5 a more transformers liked Rust interface were supported, you now use Crane just like in your python;
+- **`2025.03.19`**: 🔥 project initialized;
+
+
+
 ## 🧐 Why Choose Crane?
 
 While traditional approaches face limitations:
@@ -36,11 +44,45 @@ Crane bridges the gap through:
 
 💡 **Pro Tip**: For macOS developers, Crane delivers comparable performance to llama.cpp with significantly lower maintenance overhead. You can use it out of box directly without any GGUF conversion or something like install llama.cpp etc.
 
+Speed up your LLM inference speed on M series Apple Silicon devices to 6x with almost simillar code in your python (No quantization needed!):
 
-## 🔥 Updates
+```rust
+let dtype = DType::F16;
+let device = Device::Cpu;
 
-- **`2025.03.21`**: 🔥 Qwen2.5 a more transformers liked Rust interface were supported, you now use Crane just like in your python;
-- **`2025.03.19`**: 🔥 project initialized;
+let mut model = Qwen25Model::new(&args.model_path, &device, &dtype).unwrap();
+
+let gen_config = GenerationConfig {
+   max_new_tokens: 235,
+   temperature: Some(0.67),
+   top_p: Some(1.0),
+   repetition_penalty: 1.1,
+   repeat_last_n: 5,
+   do_sample: false,
+   pad_token_id: model.tokenizer.get_token("<|end_of_text|>"),
+   eos_token_id: model.tokenizer.get_token("<|im_end|>"),
+};
+
+let prompt = "Who are you?";
+let input_ids = model.prepare_inputs(prompt).unwrap();
+
+let mut streamer = TextStreamer {
+   tokenizer: model.tokenizer.tokenizer.clone(),
+   buffer: String::new(),
+};
+let output_ids = model
+   .generate(&input_ids, &gen_config, Some(&mut streamer))
+   .map_err(|e| format!("Generation failed: {}", e))
+   .unwrap();
+
+// decode output_ids
+let res = model.decode(&output_ids, false).unwrap();
+println!("Output: {}", res);
+```
+
+Then, your LLM inference is 6X faster on mac without Quantization! Enabling Quantization could be even faster!
+
+
 
 ## 📖 Usage
 
