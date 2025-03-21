@@ -2,29 +2,46 @@
 
 > Crane focusing on accelerate LLM inference speed with the power of kernels in candle framework, while reducing development overhead, make it portable and fast run model on both CPU and GPU.
 
-**Crane (🦩)** is  **C**andle-based **R**ust **A**ccelerate **N**eural **E**ngine. Inference popular models with Candle to get maximum speed on CPU and GPU.
-
-Crane is a high level Rust framework inference popular models. The current model will support:
-
-- [Spark-TTS](https://github.com/SparkAudio/Spark-TTS)
-- [Orpheus-TTS](https://github.com/canopyai/Orpheus-TTS)
-- Basic LLM (Qwen2.5 etc);
-- MLLM models such as (Qwen2.5 VL, Namo-R1 etc)
-
-By using Crane, you can have a very ffffffast speed on your mac especially, which means, **you don't need llama.cpp, just Crane, serving your local models in a flash speed**. 🔥 Forgotten cubersome cpp, embrace Rust.
-
-## Why Crane
-
-The reason why Crane is very simple, running LLMs with pure pytorch is relative slow due to limited optimization on inference. Currently llama.cpp is a popular option, but llama.cpp is complicated on support new models and C++ based.
-
-However, candle framework brings the gap between efficiency and simplicity. Without complicated C++ code, we can deploy new models more easily with Rust while still maintaining a fast speed.
-
-## Updates
-
-- **`2025.03.19`**: 🔥project initialized;
 
 
-## Usage
+**Crane (🦩)** - **C**andle-based **R**ust **A**ccelerated **N**eural **E**ngine
+A high-performance inference framework leveraging Rust's Candle for maximum speed on CPU/GPU.
+
+**Supported Models**:
+
+- 🎙️ TTS Systems:[Spark-TTS](https://github.com/SparkAudio/Spark-TTS) | [Orpheus-TTS](https://github.com/canopyai/Orpheus-TTS)
+- 🧠 Foundation Models:Qwen2.5 series (Base/VL), Basic LLMs
+- 🌌 Multimodal Models:
+  Namo-R1, Qwen2.5-VL
+
+**Key Advantages**:
+🚀 **Blazing-Fast Inference**: Outperforms native PyTorch with Candle's optimized kernels
+🦀 **Rust-Powered**: Eliminate C++ complexity while maintaining native performance
+🍎 **Apple Silicon Optimized**: Achieve GPU acceleration via Metal on macOS devices
+🤖 **Hardware Agnostic**: Unified codebase for CPU/CUDA/Metal execution
+
+## 🧐 Why Choose Crane?
+
+While traditional approaches face limitations:
+
+- PyTorch's suboptimal inference performance
+- llama.cpp's complex C++ codebase and model integration
+
+Crane bridges the gap through:
+
+1. **Candle Framework**: Combines Rust's efficiency with PyTorch-like ergonomics
+2. **Cross-Platform Acceleration**: Metal GPU support achieves 3-5x speedup over CPU-only
+3. **Simplified Deployment**: Add new models with <100 LOC in most cases
+
+💡 **Pro Tip**: For macOS developers, Crane delivers comparable performance to llama.cpp with significantly lower maintenance overhead. You can use it out of box directly without any GGUF conversion or something like install llama.cpp etc.
+
+
+## 🔥 Updates
+
+- **`2025.03.21`**: 🔥 Qwen2.5 a more transformers liked Rust interface were supported, you now use Crane just like in your python;
+- **`2025.03.19`**: 🔥 project initialized;
+
+## 📖 Usage
 
 To use `crane`, here are some notes:
 
@@ -44,8 +61,7 @@ That's it!
 
 Now you can run LLM extremly fast (about 6x faster than vanilla transformers on M1)!
 
-
-## Contribution
+## 🍺 Contribution
 
 PR are welcomed right now! Since we need support a brand range of new models, but both Crane and HuggingFace's Candle is very limited model scope, so please join and help!
 
@@ -61,7 +77,8 @@ As all we know, a TTS model or any model based on LLM, it might consist of diffe
 
 One can reference to `crane-core/src/models/namo2.rs` for new arch add, which uses `Siglip2`, `mm_projector`, `Qwen2.5` to support a VL model.
 
-## Speed
+
+## ⚡️ Speed
 
 Here are some speedup compare between **Crane** can other framework.
 
@@ -81,3 +98,17 @@ f16:
 
 - *Crane* is blazing fast on macOS with metal, useful for you to run local models;
 - int8 quantization still on the way, it's even faster!
+
+
+## 📑 Citation
+
+If you use Crane in your research or projects, please cite using BibTeX:
+
+```bibtex
+@misc{Crane,
+  author       = {lucasjinreal},
+  title        = {{Crane: Candle-based Rust Accelerated Neural Engine}},
+  howpublished = {\url{https://github.com/lucasjinreal/Crane}},
+  year         = {2025}
+}
+```
