@@ -25,7 +25,7 @@ fn main() {
     let device = Device::Cpu;
 
     let model = Model::new(&args.model_path, &device, &dtype).unwrap();
-    let tokenizer = model.tokenizer().clone();
+    let tokenizer = model.tokenizer.tokenizer.clone();
 
     crane_core::utils::utils::print_candle_build_info();
 

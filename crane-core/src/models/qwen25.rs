@@ -4,6 +4,8 @@ extern crate intel_mkl_src;
 #[cfg(feature = "accelerate")]
 extern crate accelerate_src;
 
+use std::io::Write;
+
 use anyhow::{Error as E, Result};
 
 use candle_transformers::models::qwen2::{Config as ConfigBase, ModelForCausalLM as ModelBase};
@@ -15,6 +17,7 @@ use candle_transformers::generation::LogitsProcessor;
 use hf_hub::{api::sync::Api, Repo, RepoType};
 use tokenizers::Tokenizer;
 
+use crate::generation::based::ModelForCausalLM;
 use crate::utils::token_output_stream::TokenOutputStream;
 use crate::utils::utils;
 
@@ -116,7 +119,8 @@ impl TextGeneration {
 }
 
 pub struct Model {
-    pub tokenizer: Tokenizer,
+    pub tokenizer: TokenOutputStream,
+    pub device: Device,
     model_typed: ModelTyped,
 }
 
@@ -128,10 +132,6 @@ pub enum ModelTyped {
 impl Model {
     pub fn new(model_path: &str, device: &Device, dtype: &DType) -> Result<Self> {
         Self::from_pretrained(model_path, device, dtype)
-    }
-
-    pub fn tokenizer(&self) -> Tokenizer {
-        self.tokenizer.clone()
     }
 
     fn forward(&mut self, xs: &Tensor, s: usize) -> candle_core::Result<Tensor> {
@@ -159,8 +159,96 @@ impl Model {
         let model_typed = ModelTyped::Base(ModelBase::new(&config, vb)?);
 
         Ok(Self {
-            tokenizer,
+            tokenizer: TokenOutputStream::new(tokenizer),
+            device: device.clone(),
             model_typed,
         })
+    }
+
+    pub fn prepare_inputs(&self, inputs: &str) -> Result<Vec<u32>> {
+        let input_ids = self
+            .tokenizer
+            .tokenizer
+            .encode(inputs, true)
+            .map_err(E::msg)
+            .unwrap()
+            .get_ids()
+            .to_vec();
+        Ok(input_ids)
+    }
+
+    pub fn decode(&self, input: &[u32], skip_special_tokens: bool) -> Result<String> {
+        let tokens = self
+            .tokenizer
+            .tokenizer
+            .decode(input, skip_special_tokens)
+            .map_err(E::msg)
+            .unwrap();
+        Ok(tokens)
+    }
+}
+
+impl ModelForCausalLM for Model {
+    fn device(&self) -> &Device {
+        &self.device
+    }
+
+    fn generate(
+        &mut self,
+        input_ids: &[u32],
+        config: &crate::generation::GenerationConfig,
+        mut streamer: Option<&mut dyn crate::generation::streamer::TokenStreamer>,
+    ) -> Result<Vec<u32>> {
+        self.tokenizer.clear();
+
+        let mut logits_processor = LogitsProcessor::new(1024, config.temperature, config.top_p);
+
+        let mut tokens = input_ids.to_vec();
+
+        let mut generated_tokens = 0usize;
+        let eos_token = match self.tokenizer.get_token("<|endoftext|>") {
+            Some(token) => token,
+            None => anyhow::bail!("cannot find the <|endoftext|> token"),
+        };
+        let start_gen = std::time::Instant::now();
+        for index in 0..config.max_new_tokens {
+            let context_size = if index > 0 { 1 } else { tokens.len() };
+            let start_pos = tokens.len().saturating_sub(context_size);
+            let ctxt = &tokens[start_pos..];
+            let input = Tensor::new(ctxt, &self.device)?.unsqueeze(0)?;
+            let logits = self.forward(&input, start_pos)?;
+            let logits = logits.squeeze(0)?.squeeze(0)?.to_dtype(DType::F32)?;
+            let logits = if config.repetition_penalty == 1. {
+                logits
+            } else {
+                let start_at = tokens.len().saturating_sub(config.repeat_last_n);
+                candle_transformers::utils::apply_repeat_penalty(
+                    &logits,
+                    config.repetition_penalty,
+                    &tokens[start_at..],
+                )?
+            };
+
+            let next_token = logits_processor.sample(&logits)?;
+            tokens.push(next_token);
+            generated_tokens += 1;
+            if next_token == eos_token {
+                break;
+            }
+            // if let Some(t) = self.tokenizer.next_token(next_token)? {
+            //     print!("{t}");
+            //     // std::io::stdout().flush()?;
+            // }
+        }
+        let dt = start_gen.elapsed();
+        // if let Some(rest) = self.tokenizer.decode_rest().map_err(E::msg)? {
+        //     print!("{rest}");
+        // }
+        std::io::stdout().flush()?;
+        println!(
+            "\n{generated_tokens} tokens generated ({:.2} token/s)",
+            generated_tokens as f64 / dt.as_secs_f64(),
+        );
+        Ok(tokens)
     }
 }

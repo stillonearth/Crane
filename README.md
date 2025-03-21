@@ -24,6 +24,27 @@ However, candle framework brings the gap between efficiency and simplicity. With
 - **`2025.03.19`**: 🔥project initialized;
 
 
+## Usage
+
+To use `crane`, here are some notes:
+
+- `crane-core`: All models comes into core, this is a lib;
+- `crane`: All Apps (runnable AI pipelines, such as Qwen2-Chat, Spark-TTS, Qwen2.5-VL etc), you can build your apps inside it, each app is a binary for demonstration purpose;
+- `crane-oai`: OpenAI API server serving various services in OpenAI format;
+
+1. Make sure latest Rust were installed;
+2. Build:
+
+   ```
+   cargo run --bin llmbench --release
+   cargo run --bin qwenchat --release
+   ```
+
+That's it!
+
+Now you can run LLM extremly fast (about 6x faster than vanilla transformers on M1)!
+
+
 ## Contribution
 
 PR are welcomed right now! Since we need support a brand range of new models, but both Crane and HuggingFace's Candle is very limited model scope, so please join and help!
@@ -39,7 +60,6 @@ For me, the easiest way is to using Claude 3.7 to help write Rust conversion fro
 As all we know, a TTS model or any model based on LLM, it might consist of different modules, for example, in Spark-TTS, we will have a BiCodec Model before LLM, these module can be made into a separated module, and for Spark-TTS itself, we can gathering all module to inference it correctly.
 
 One can reference to `crane-core/src/models/namo2.rs` for new arch add, which uses `Siglip2`, `mm_projector`, `Qwen2.5` to support a VL model.
-
 
 ## Speed
 

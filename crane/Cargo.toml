@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = "1.0.97"
 clap = {version = "4.5.32", features = ["derive"]}
 
 crane-core = { path = "../crane-core" }
@@ -16,6 +17,10 @@ path = "apps/llmbench/main.rs"
 [[bin]]
 name = "sparktts"
 path = "apps/sparktts/main.rs"
+
+[[bin]]
+name = "qwenchat"
+path = "apps/qwenchat/main.rs"
 
 [[bin]]
 name = "example"

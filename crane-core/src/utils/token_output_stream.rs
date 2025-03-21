@@ -3,7 +3,7 @@ use candle_core::Result;
 /// This is a wrapper around a tokenizer to ensure that tokens can be returned to the user in a
 /// streaming way rather than having to wait for the full decoding.
 pub struct TokenOutputStream {
-    tokenizer: tokenizers::Tokenizer,
+    pub tokenizer: tokenizers::Tokenizer,
     tokens: Vec<u32>,
     prev_index: usize,
     current_index: usize,
