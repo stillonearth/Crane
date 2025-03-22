@@ -22,6 +22,7 @@ struct ChatCLI {
     tokenizer: AutoTokenizer,
     model: Qwen25Model,
     gen_config: GenerationConfig,
+    max_turns: usize,
 }
 
 impl ChatCLI {
@@ -30,7 +31,7 @@ impl ChatCLI {
         let device = Device::Cpu;
 
         let tokenizer = AutoTokenizer::from_pretrained(&args.model_path, None).unwrap();
-        let mut model = Qwen25Model::new(&args.model_path, &device, &dtype)?;
+        let model = Qwen25Model::new(&args.model_path, &device, &dtype)?;
 
         let gen_config = GenerationConfig {
             max_new_tokens: 235,
@@ -51,6 +52,7 @@ impl ChatCLI {
             tokenizer,
             model,
             gen_config,
+            max_turns: 4,
         })
     }
 
@@ -63,7 +65,7 @@ impl ChatCLI {
     }
 
     fn get_user_input(&self) -> anyhow::Result<String> {
-        print!("{} ", "You:".bright_blue());
+        print!("{} ", "You:".bold().bright_green());
         io::stdout().flush()?;
 
         let mut input = String::new();
@@ -101,10 +103,15 @@ impl ChatCLI {
                 .apply_chat_template(&self.history, true)
                 .unwrap();
 
-            print!("{} ", "AI:".bright_magenta());
+            print!("{} ", "AI:".bold().bright_magenta());
             let response = self.generate_response(&prompt);
             // println!("{}\n", response.bright_white());
+
             self.history.push(Msg!(Role::Assistant, &response));
+            if self.history.len() > 2 * self.max_turns {
+                self.history
+                    .drain(0..(self.history.len() - 2 * self.max_turns));
+            }
         }
 
         println!("{}", "\nGoodbye!".bright_cyan());

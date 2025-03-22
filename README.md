@@ -2,6 +2,7 @@
 
 > Crane focusing on accelerate LLM inference speed with the power of kernels in candle framework, while reducing development overhead, make it portable and fast run model on both CPU and GPU.
 
+![](data/aa.gif)
 
 
 **Crane (🦩)** - **C**andle-based **R**ust **A**ccelerated **N**eural **E**ngine
@@ -47,40 +48,82 @@ Crane bridges the gap through:
 Speed up your LLM inference speed on M series Apple Silicon devices to 6x with almost simillar code in your python (No quantization needed!):
 
 ```rust
-let dtype = DType::F16;
-let device = Device::Cpu;
 
-let mut model = Qwen25Model::new(&args.model_path, &device, &dtype).unwrap();
-
-let gen_config = GenerationConfig {
-   max_new_tokens: 235,
-   temperature: Some(0.67),
-   top_p: Some(1.0),
-   repetition_penalty: 1.1,
-   repeat_last_n: 5,
-   do_sample: false,
-   pad_token_id: model.tokenizer.get_token("<|end_of_text|>"),
-   eos_token_id: model.tokenizer.get_token("<|im_end|>"),
+use clap::Parser;
+use crane_core::{
+    Msg,
+    autotokenizer::AutoTokenizer,
+    chat::Role,
+    generation::{GenerationConfig, based::ModelForCausalLM, streamer::TextStreamer},
+    models::{DType, Device, qwen25::Model as Qwen25Model},
 };
 
-let prompt = "Who are you?";
-let input_ids = model.prepare_inputs(prompt).unwrap();
+#[derive(Parser, Debug)]
+#[clap(about, version, author)]
+struct Args {
+    #[clap(short('m'), long, default_value = "checkpoints/Qwen2.5-0.5B-Instruct")]
+    model_path: String,
+}
 
-let mut streamer = TextStreamer {
-   tokenizer: model.tokenizer.tokenizer.clone(),
-   buffer: String::new(),
-};
-let output_ids = model
-   .generate(&input_ids, &gen_config, Some(&mut streamer))
-   .map_err(|e| format!("Generation failed: {}", e))
-   .unwrap();
+fn main() {
+    crane_core::utils::utils::print_candle_build_info();
 
-// decode output_ids
-let res = model.decode(&output_ids, false).unwrap();
-println!("Output: {}", res);
+    let args = Args::parse();
+    let dtype = DType::F16;
+    let device = Device::Cpu;
+
+    let tokenizer = AutoTokenizer::from_pretrained(&args.model_path, None).unwrap();
+    let mut model = Qwen25Model::new(&args.model_path, &device, &dtype).unwrap();
+
+    let gen_config = GenerationConfig {
+        max_new_tokens: 235,
+        temperature: Some(0.67),
+        top_p: Some(1.0),
+        repetition_penalty: 1.1,
+        repeat_last_n: 1,
+        do_sample: false,
+        pad_token_id: tokenizer.get_token("<|end_of_text|>"),
+        eos_token_id: tokenizer.get_token("<|im_end|>"),
+        report_speed: true,
+    };
+
+    let chats = [
+        Msg!(Role::User, "hello"),
+        Msg!(Role::Assistant, "Hi, how are you?"),
+        Msg!(Role::User, "I am OK, tell me some truth about Yoga."),
+    ];
+    let prompt = tokenizer.apply_chat_template(&chats, true).unwrap();
+    println!("prompt templated: {:?}\n", prompt);
+
+    let input_ids = model.prepare_inputs(&prompt).unwrap();
+    let _ = model.warnmup();
+
+    let mut streamer = TextStreamer {
+        tokenizer: tokenizer.clone(),
+        buffer: String::new(),
+    };
+    let output_ids = model
+        .generate(&input_ids, &gen_config, Some(&mut streamer))
+        .map_err(|e| format!("Generation failed: {}", e))
+        .unwrap();
+
+    let res = tokenizer.decode(&output_ids, false).unwrap();
+    println!("Output: {}", res);
+}
+
 ```
 
+Above is all the codes you need to run end2end chat in Qwen2.5 in pure Rust, nothing overhead compare with llama.cpp.
+
 Then, your LLM inference is 6X faster on mac without Quantization! Enabling Quantization could be even faster!
+
+![](data/aa.gif)
+
+For cli chat, run:
+
+```
+cargo run --bin qwenchat --release
+```
 
 
 

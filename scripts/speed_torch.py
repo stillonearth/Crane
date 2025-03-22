@@ -13,13 +13,14 @@ def benchmark_speed(model_path):
     )
     tokenizer = AutoTokenizer.from_pretrained(model_path, padding_side="left")
 
-    tokenizer.apply_chat_template()
+    # tokenizer.apply_chat_template()
 
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     # Prepare input
-    prompt = "Who are you?"
+    # prompt = "Who are you?"
+    prompt = "Write an article about spring"
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     streamer = TextStreamer(tokenizer, skip_prompt=True)
 
