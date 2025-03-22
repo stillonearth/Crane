@@ -55,6 +55,7 @@ impl TextGeneration {
 
     pub fn run(&mut self, prompt: &str, sample_len: usize) -> Result<()> {
         use std::io::Write;
+        self.model.clear_kv_cache();
         self.tokenizer.clear();
         let mut tokens = self
             .tokenizer
@@ -141,6 +142,13 @@ impl Model {
         }
     }
 
+    pub fn clear_kv_cache(&mut self) {
+        match self.model_typed {
+            ModelTyped::Moe(ref mut m) => m.clear_kv_cache(),
+            ModelTyped::Base(ref mut m) => m.clear_kv_cache(),
+        }
+    }
+
     fn from_pretrained(model_path: &str, device: &Device, dtype: &DType) -> Result<Model> {
         let tokenizer_path = std::path::Path::new(model_path).join("tokenizer.json");
         if !tokenizer_path.exists() {
@@ -200,6 +208,7 @@ impl ModelForCausalLM for Model {
         mut streamer: Option<&mut dyn crate::generation::streamer::TokenStreamer>,
     ) -> Result<Vec<u32>> {
         self.tokenizer.clear();
+        self.clear_kv_cache();
 
         let mut logits_processor = LogitsProcessor::new(1024, config.temperature, config.top_p);
 
@@ -222,8 +231,7 @@ impl ModelForCausalLM for Model {
             let start_pos = tokens.len().saturating_sub(context_size);
             let ctxt = &tokens[start_pos..];
             let input = Tensor::new(ctxt, &self.device)?.unsqueeze(0)?;
-            println!("input: {:?}", input.shape());
-            println!("start_pos: {:?}", start_pos);
+
             let logits = self.forward(&input, start_pos)?;
             let logits = logits.squeeze(0)?.squeeze(0)?.to_dtype(DType::F32)?;
             let logits = if config.repetition_penalty == 1. {
