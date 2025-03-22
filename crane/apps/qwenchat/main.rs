@@ -1,16 +1,14 @@
-// Qwen2.5 LLM Chat
-// A simple design make you easily use Qwen model in Rust
-// it supports streaming as well.
-// For Multimodal usage, refer to Namo-R1
-
+use anyhow::Error;
 use clap::Parser;
+use colored::*;
 use crane_core::{
     Msg,
     autotokenizer::AutoTokenizer,
-    chat::Role,
+    chat::{Message, Role},
     generation::{GenerationConfig, based::ModelForCausalLM, streamer::TextStreamer},
     models::{DType, Device, qwen25::Model as Qwen25Model},
 };
+use std::io::{self, Write};
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -19,48 +17,103 @@ struct Args {
     model_path: String,
 }
 
-fn main() {
-    crane_core::utils::utils::print_candle_build_info();
+struct ChatCLI {
+    history: Vec<Message>,
+    tokenizer: AutoTokenizer,
+    model: Qwen25Model,
+    gen_config: GenerationConfig,
+}
 
+impl ChatCLI {
+    fn new(args: Args) -> anyhow::Result<Self> {
+        let dtype = DType::F16;
+        let device = Device::Cpu;
+
+        let tokenizer = AutoTokenizer::from_pretrained(&args.model_path, None).unwrap();
+        let mut model = Qwen25Model::new(&args.model_path, &device, &dtype)?;
+
+        let gen_config = GenerationConfig {
+            max_new_tokens: 235,
+            temperature: Some(0.67),
+            top_p: Some(1.0),
+            repetition_penalty: 1.1,
+            repeat_last_n: 1,
+            do_sample: false,
+            pad_token_id: tokenizer.get_token("<|end_of_text|>"),
+            eos_token_id: tokenizer.get_token("<|im_end|>"),
+            report_speed: true,
+        };
+
+        // model.warmup();
+
+        Ok(Self {
+            history: Vec::new(),
+            tokenizer,
+            model,
+            gen_config,
+        })
+    }
+
+    fn print_banner(&self) {
+        println!("{}", "Welcome to Qwen Chat!".bright_green());
+        println!(
+            "{}",
+            "Type your message below (type 'exit' to quit)\n".bright_green()
+        );
+    }
+
+    fn get_user_input(&self) -> anyhow::Result<String> {
+        print!("{} ", "You:".bright_blue());
+        io::stdout().flush()?;
+
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+        Ok(input.trim().to_string())
+    }
+
+    fn generate_response(&mut self, prompt: &str) -> String {
+        let input_ids = self.model.prepare_inputs(prompt).unwrap();
+
+        let mut streamer = TextStreamer {
+            tokenizer: self.tokenizer.clone(),
+            buffer: String::new(),
+        };
+
+        let output_ids = self
+            .model
+            .generate(&input_ids, &self.gen_config, Some(&mut streamer))
+            .unwrap();
+        self.tokenizer.decode(&output_ids, false).unwrap()
+    }
+
+    fn run(&mut self) -> anyhow::Result<()> {
+        self.print_banner();
+
+        loop {
+            let input = self.get_user_input()?;
+            if input.to_lowercase() == "exit" {
+                break;
+            }
+
+            self.history.push(Msg!(Role::User, &input));
+            let prompt = self
+                .tokenizer
+                .apply_chat_template(&self.history, true)
+                .unwrap();
+
+            print!("{} ", "AI:".bright_magenta());
+            let response = self.generate_response(&prompt);
+            // println!("{}\n", response.bright_white());
+            self.history.push(Msg!(Role::Assistant, &response));
+        }
+
+        println!("{}", "\nGoodbye!".bright_cyan());
+        Ok(())
+    }
+}
+
+fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let dtype = DType::F16;
-    let device = Device::Cpu;
-
-    let tokenizer = AutoTokenizer::from_pretrained(&args.model_path, None).unwrap();
-    let mut model = Qwen25Model::new(&args.model_path, &device, &dtype).unwrap();
-
-    let gen_config = GenerationConfig {
-        max_new_tokens: 235,
-        temperature: Some(0.67),
-        top_p: Some(1.0),
-        repetition_penalty: 1.1,
-        repeat_last_n: 1,
-        do_sample: false,
-        pad_token_id: tokenizer.get_token("<|end_of_text|>"),
-        eos_token_id: tokenizer.get_token("<|im_end|>"),
-        report_speed: true,
-    };
-
-    let chats = [
-        Msg!(Role::User, "hello"),
-        Msg!(Role::Assistant, "Hi, how are you?"),
-        Msg!(Role::User, "I am OK, tell me some truth about Yoga."),
-    ];
-    let prompt = tokenizer.apply_chat_template(&chats, true).unwrap();
-    println!("prompt templated: {:?}\n", prompt);
-
-    let input_ids = model.prepare_inputs(&prompt).unwrap();
-    let _ = model.warnmup();
-
-    let mut streamer = TextStreamer {
-        tokenizer: tokenizer.clone(),
-        buffer: String::new(),
-    };
-    let output_ids = model
-        .generate(&input_ids, &gen_config, Some(&mut streamer))
-        .map_err(|e| format!("Generation failed: {}", e))
-        .unwrap();
-
-    let res = tokenizer.decode(&output_ids, false).unwrap();
-    println!("Output: {}", res);
+    let mut chat = ChatCLI::new(args)?;
+    chat.run()
 }

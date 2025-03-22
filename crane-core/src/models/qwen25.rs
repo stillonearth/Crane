@@ -185,7 +185,7 @@ impl Model {
         Ok(input_ids)
     }
 
-    pub fn warnmup(&mut self) {
+    pub fn warmup(&mut self) {
         let _ = self
             .generate(
                 &[45, 546, 456],
@@ -213,11 +213,6 @@ impl ModelForCausalLM for Model {
         let mut logits_processor = LogitsProcessor::new(1024, config.temperature, config.top_p);
 
         let mut tokens = input_ids.to_vec();
-        for &t in tokens.iter() {
-            if let Some(t) = self.tokenizer.next_token(t)? {
-                // print!("{t}")
-            }
-        }
         std::io::stdout().flush()?;
 
         let mut generated_tokens = 0usize;
@@ -264,7 +259,7 @@ impl ModelForCausalLM for Model {
 
         if config.report_speed {
             println!(
-                "\n{generated_tokens} tokens generated ({:.2} token/s)",
+                "\n{generated_tokens} tokens generated ({:.2} token/s)\n",
                 generated_tokens as f64 / dt.as_secs_f64(),
             );
         }

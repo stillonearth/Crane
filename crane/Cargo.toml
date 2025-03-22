@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.97"
 clap = {version = "4.5.32", features = ["derive"]}
+colored = "3.0.0"
 
 crane-core = { path = "../crane-core" }
 
