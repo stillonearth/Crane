@@ -122,6 +122,9 @@ Then, your LLM inference is 6X faster on mac without Quantization! Enabling Quan
 For cli chat, run:
 
 ```
+# download models of Qwen2.5
+mkdir -p checkpoints/
+huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct --local-dir checkpoints/Qwen2.5-0.5B-Instruct
 cargo run --bin qwenchat --release
 ```
 

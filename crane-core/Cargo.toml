@@ -8,12 +8,16 @@ anyhow = "1.0.97"
 
 candle-nn = "0.8.4"
 candle-transformers = "0.8.4"
+candle-flash-attn = { version = "0.8.4", optional = true }
 clap = { version = "4.5.32", features = ["derive"] }
 hf-hub = "0.4.2"
 minijinja = "2.8.0"
 serde = "1.0.219"
 serde_json = "1.0.140"
 tokenizers = "0.21.1"
+
+cudarc = { version = "0.13.9", optional = true }
+intel-mkl-src = { version = "0.8.1", optional = true }
 
 # candle-core = { version = "0.8.4", features = ["accelerate"] }
 
@@ -24,4 +28,23 @@ candle-core = { version = "0.8.4", features = ["metal"] }
 candle-core = { version = "0.8.4", features = ["accelerate"] }
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
-candle-core = { version = "0.8.4", optional = true }
+candle-core = { version = "0.8.4" }
+
+[build-dependencies]
+bindgen_cuda = { version = "0.1.1", optional = true }
+
+[features]
+cuda = [
+    "candle-core/cuda",
+    "candle-nn/cuda",
+    "candle-transformers/cuda",
+    "dep:bindgen_cuda",
+]
+cudnn = ["candle-core/cudnn"]
+flash-attn = ["cuda", "candle-transformers/flash-attn", "dep:candle-flash-attn"]
+mkl = [
+    "dep:intel-mkl-src",
+    "candle-core/mkl",
+    "candle-nn/mkl",
+    "candle-transformers/mkl",
+]
