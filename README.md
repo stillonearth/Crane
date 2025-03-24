@@ -15,6 +15,13 @@ A high-performance inference framework leveraging Rust's Candle for maximum spee
 - 🌌 Multimodal Models:
   Namo-R1, Qwen2.5-VL
 
+**Coming to more models soon**:
+
+- [ ] [Canary-180M-flash](https://huggingface.co/nvidia/canary-180m-flash)
+- [ ] [SmolDocing-256M](https://huggingface.co/ds4sd/SmolDocling-256M-preview)
+
+submit your models make other users use it easier!
+
 **Key Advantages**:
 
 - 🚀 **Blazing-Fast Inference**: Outperforms native PyTorch with Candle's optimized kernels;
