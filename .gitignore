@@ -4,3 +4,7 @@ checkpoints/
 checkpoints
 
 .DS_Store
+*.onnx
+outputs/
+
+*.bin
