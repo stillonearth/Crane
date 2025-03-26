@@ -7,24 +7,24 @@ use anyhow::{anyhow, Result};
 use candle_core::{DType, Device, Tensor};
 use hound::{SampleFormat, WavSpec, WavWriter};
 
-// const SNAC_24_DECODER_ONNX_MODEL_PATH: &str = "checkpoints/decoder_model_fp16.onnx";
-const SNAC_24_DECODER_ONNX_MODEL_PATH: &str = "checkpoints/snac_24khz_sim.onnx";
-
 #[derive(Debug)]
-pub struct SNAC24Decoder {
+pub struct SNAC24DecoderONNX {
     model: candle_onnx::onnx::ModelProto,
 }
 
-impl SNAC24Decoder {
-    pub fn new(device: Option<&Device>) -> Result<Self> {
+impl SNAC24DecoderONNX {
+    const SNAC_24_DECODER_ONNX_MODEL_PATH: &str = "checkpoints/snac_24khz_sim.onnx";
+
+    pub fn new(model_path: Option<&str>, device: Option<&Device>) -> Result<Self> {
         let target_device = device.unwrap_or(&Device::Cpu);
-        if !std::path::Path::new(SNAC_24_DECODER_ONNX_MODEL_PATH).exists() {
+        let model_path = model_path.unwrap_or(Self::SNAC_24_DECODER_ONNX_MODEL_PATH);
+        if !std::path::Path::new(model_path).exists() {
             return Err(anyhow::anyhow!(
                 "path not found {}, download from: https://huggingface.co/onnx-community/snac_24khz-ONNX/resolve/main/onnx/decoder_model_fp16.onnx",
-                SNAC_24_DECODER_ONNX_MODEL_PATH
+                model_path
             ));
         }
-        let model = candle_onnx::read_file(SNAC_24_DECODER_ONNX_MODEL_PATH)?;
+        let model = candle_onnx::read_file(model_path)?;
         Ok(Self { model })
     }
 
