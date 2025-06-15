@@ -4,3 +4,4 @@ checkpoints/
 checkpoints
 
 .DS_Store
+vendor/
