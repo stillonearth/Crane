@@ -5,3 +5,7 @@ checkpoints
 
 .DS_Store
 vendor/
+*.onnx
+outputs/
+
+*.bin
