@@ -79,11 +79,6 @@ impl ChatCLI {
     fn generate_response(&mut self, prompt: &str, streamer: &mut dyn TokenStreamer) -> String {
         let input_ids = self.model.prepare_inputs(prompt).unwrap();
 
-        // let mut streamer = TextStreamer {
-        //     tokenizer: self.tokenizer.clone(),
-        //     buffer: String::new(),
-        // };
-
         let output_ids = self
             .model
             .generate(&input_ids, &self.gen_config, Some(streamer))
